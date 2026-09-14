@@ -411,7 +411,7 @@ async function watchHandler(req: Request, res: Response) {
       });
     }
 
-     if (source === 'reanime') {
+         if (source === 'reanime') {
       const streamData = await getReanimeWatch(siteIds.anilistId || id, type as 'sub' | 'dub', epNum);
       const providerStream = streamData.streams[0];
       
@@ -426,12 +426,14 @@ async function watchHandler(req: Request, res: Response) {
         availableServers: filtered.map((s: any) => s.name),
         embedUrl: null,
         m3u8: providerStream.url,
-        hlsProxyUrl: proxiedHlsUrl(req, providerStream.url, BASE), // BASE is 'https://reanime.to'
+        hlsProxyUrl: proxiedHlsUrl(req, providerStream.url, 'https://reanime.to'), // <-- Fixed here
         playbackMode: 'hls',
         iframeOnly: false,
         subtitles: (providerStream.subtitles || []).map((s: any) => ({
-          url: proxiedSubtitleUrl(req, s.url, BASE),
+          url: proxiedSubtitleUrl(req, s.url, 'https://reanime.to'), // <-- Fixed here
           language: s.language,
+          format: s.format,
+          default: s.default,
         })),
         intro: providerStream.intro,
         outro: providerStream.outro,
