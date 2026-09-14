@@ -25,9 +25,8 @@ jobs:
           # 1. Start the scraper app in the background
           npm start &
           
-          # 2. Wait 5 seconds for the app to fully boot up
+          # 2. Wait 5 seconds for the app to boot
           sleep 5
           
-          # 3. Install localtunnel globally and open a public tunnel on the app's port
-          # Note: Change '3000' below if the Anivault-Scraper runs on a different port (like 5000 or 8080)
-          npx localtunnel --port 3000
+          # 3. Create a clean public URL using Pinggy (No password/warnings)
+          ssh -o StrictHostKeyChecking=no -p 443 -R0:localhost:3000 a.pinggy.io
