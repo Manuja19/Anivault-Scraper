@@ -22,6 +22,7 @@ export interface SiteIds {
     anidao?: string;
     anikoto?: string;
     desidub?: string;
+    reanime?: string;
   };
 }
 
@@ -72,6 +73,20 @@ async function enrichDesidub(result: SiteIds, altTitle?: string | null): Promise
   return result;
 }
 
+async function enrichReanime(result: SiteIds, altTitle?: string | null): Promise<SiteIds> {
+  if (result.siteIds.reanime || result.title === 'Unknown') return result;
+  
+  // Reanime uses its own internal resolveSeries logic based on anilistId, 
+  // so we can just flag it as available if we have an anilistId.
+  if (result.anilistId) {
+    result.siteIds.reanime = String(result.anilistId);
+  } else if (altTitle) {
+    // Fallback logic can be added here if needed, but Reanime resolver 
+    // handles anilistId directly in getReanimeEpisodes.
+  }
+  return result;
+}
+
 // MAL ID → AniList ID
 // Returns null (never throws) if AniList is down/unreachable -- callers use
 // that as the signal to fall back to the MAL-only path (getSiteIdsByMal).
@@ -117,7 +132,7 @@ export async function getSiteIds(anilistId: number): Promise<SiteIds | null> {
     const wasMissingAnimeHeaven = !cached.siteIds.animeheaven;
     const wasMissingAnikoto = !cached.siteIds.anikoto;
     const wasMissingDesidub = !cached.siteIds.desidub;
-    const enriched = await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle);
+    const enriched = await enrichReanime(await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle), cached.altTitl
     if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || (wasMissingAnikoto && enriched.siteIds.anikoto) || (wasMissingDesidub && enriched.siteIds.desidub)) {
       cacheSet(cacheKey, enriched);
     }
@@ -180,7 +195,7 @@ export async function getSiteIdsByMal(malId: number): Promise<SiteIds | null> {
     const wasMissingAnimeHeaven = !cached.siteIds.animeheaven;
     const wasMissingAnikoto = !cached.siteIds.anikoto;
     const wasMissingDesidub = !cached.siteIds.desidub;
-    const enriched = await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle);
+    const enriched = await enrichReanime(await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle), cached.altTitl
     if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || (wasMissingAnikoto && enriched.siteIds.anikoto) || (wasMissingDesidub && enriched.siteIds.desidub)) {
       cacheSet(cacheKey, enriched);
     }
