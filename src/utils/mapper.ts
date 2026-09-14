@@ -11,7 +11,7 @@ export interface SiteIds {
   malId: number | null;
   title: string;
   // Secondary title candidate (opposite of `title`'s romaji/English choice)
-  // used only to retry site-matching (Anikoto/AnimeHeaven/DesiDub) when the primary
+  // used only to retry site-matching (Anikoto/AnimeHeaven/DesiDub/Reanime) when the primary
   // title doesn't score a good match. Not part of the public /info response
   // (routes.ts only ever destructures the named fields it wants).
   altTitle?: string | null;
@@ -132,8 +132,21 @@ export async function getSiteIds(anilistId: number): Promise<SiteIds | null> {
     const wasMissingAnimeHeaven = !cached.siteIds.animeheaven;
     const wasMissingAnikoto = !cached.siteIds.anikoto;
     const wasMissingDesidub = !cached.siteIds.desidub;
-    const enriched = await enrichReanime(await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle), cached.altTitl
-    if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || (wasMissingAnikoto && enriched.siteIds.anikoto) || (wasMissingDesidub && enriched.siteIds.desidub)) {
+    // ✅ FIXED: Properly closed the nested function calls with cached.altTitle);
+    const enriched = await enrichReanime(
+      await enrichDesidub(
+        await enrichAnikoto(
+          await enrichAnimeHeaven(cached, cached.altTitle), 
+          cached.altTitle
+        ), 
+        cached.altTitle
+      ), 
+      cached.altTitle
+    );
+    
+    if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || 
+        (wasMissingAnikoto && enriched.siteIds.anikoto) || 
+        (wasMissingDesidub && enriched.siteIds.desidub)) {
       cacheSet(cacheKey, enriched);
     }
     return enriched;
@@ -170,6 +183,7 @@ export async function getSiteIds(anilistId: number): Promise<SiteIds | null> {
   await enrichAnimeHeaven(result, result.altTitle);
   await enrichAnikoto(result, result.altTitle);
   await enrichDesidub(result, result.altTitle);
+  await enrichReanime(result, result.altTitle); // ✅ Added Reanime enrichment here
 
   // If still no zoro ID, try a slug guess (title-anilistId format common on HiAnime clones)
   // This is a heuristic and may not always work
@@ -187,7 +201,7 @@ export async function getSiteIds(anilistId: number): Promise<SiteIds | null> {
 // malToAnilist can't resolve an AniList ID (AniList down/blocked). Note:
 // zoro/gogoanime via Anify both key off anilistId, so
 // those stay unavailable here -- everything keyed off title (animeheaven,
-// anikoto, desidub) still works normally.
+// anikoto, desidub, reanime) still works normally.
 export async function getSiteIdsByMal(malId: number): Promise<SiteIds | null> {
   const cacheKey = `siteids:mal:${malId}`;
   const cached = cacheGet<SiteIds>(cacheKey);
@@ -195,8 +209,21 @@ export async function getSiteIdsByMal(malId: number): Promise<SiteIds | null> {
     const wasMissingAnimeHeaven = !cached.siteIds.animeheaven;
     const wasMissingAnikoto = !cached.siteIds.anikoto;
     const wasMissingDesidub = !cached.siteIds.desidub;
-    const enriched = await enrichReanime(await enrichDesidub(await enrichAnikoto(await enrichAnimeHeaven(cached, cached.altTitle), cached.altTitle), cached.altTitle), cached.altTitl
-    if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || (wasMissingAnikoto && enriched.siteIds.anikoto) || (wasMissingDesidub && enriched.siteIds.desidub)) {
+    // ✅ FIXED: Properly closed the nested function calls with cached.altTitle);
+    const enriched = await enrichReanime(
+      await enrichDesidub(
+        await enrichAnikoto(
+          await enrichAnimeHeaven(cached, cached.altTitle), 
+          cached.altTitle
+        ), 
+        cached.altTitle
+      ), 
+      cached.altTitle
+    );
+    
+    if ((wasMissingAnimeHeaven && enriched.siteIds.animeheaven) || 
+        (wasMissingAnikoto && enriched.siteIds.anikoto) || 
+        (wasMissingDesidub && enriched.siteIds.desidub)) {
       cacheSet(cacheKey, enriched);
     }
     return enriched;
@@ -223,6 +250,7 @@ export async function getSiteIdsByMal(malId: number): Promise<SiteIds | null> {
   await enrichAnimeHeaven(result, result.altTitle);
   await enrichAnikoto(result, result.altTitle);
   await enrichDesidub(result, result.altTitle);
+  await enrichReanime(result, result.altTitle); // ✅ Added Reanime enrichment here
 
   cacheSet(cacheKey, result);
   return result;
