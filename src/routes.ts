@@ -12,10 +12,11 @@ import { getAnimeDetails, getEpisodes as getMalEpisodes, getEpisode as getMalEpi
 import { getSeasonNow, getTopBanners, getStreamingEpisodes, AniListStreamingEpisode, getAnimeImages as getAnilistAnimeImages } from './scrapers/anilist';
 import { getEpisodeThumbnail as getTmdbEpisodeThumbnail, getEpisodeData as getTmdbEpisodeData, getShowEpisodeCount as getTmdbEpisodeCount, getAnimeImages as getTmdbAnimeImages, extractSeasonHint } from './scrapers/tmdb';
 import { getKitsuAnimeId, getEpisodeThumbnail as getKitsuEpisodeThumbnail, getEpisodeData as getKitsuEpisodeData, getAnimeImages as getKitsuAnimeImages } from './scrapers/kitsu';
+import { getReanimeEpisodes, getReanimeWatch } from './scrapers/reanime';
 
 const router = Router();
 
-const SOURCES = ['animeheaven', 'anikoto', 'desidub'] as const;
+const SOURCES = ['animeheaven', 'anikoto', 'desidub', 'reanime'] as const;
 type Source = typeof SOURCES[number];
 
 function publicBase(req: Request): string {
@@ -116,6 +117,19 @@ async function fetchEpisodes(source: Source, siteIds: any, overrides: { heavenId
     const slug = siteIds.siteIds?.anikoto as string | undefined;
     if (!slug) return { episodes: [], siteId: '', error: 'Not indexed on Anikoto' };
     return { episodes: await getAnikotoEpisodes(slug), siteId: slug };
+  }
+  if (source === 'reanime') {
+    const alId = siteIds.anilistId;
+    if (!alId) return { episodes: [], siteId: '', error: 'ReAnime requires an AniList ID' };
+    const reanimeData = await getReanimeEpisodes(alId).catch(() => null);
+    if (!reanimeData) return { episodes: [], siteId: '', error: 'Not indexed on ReAnime' };
+    
+    // Format ReAnime episodes to match the standard { id, num, title } shape
+    const formattedEps = [
+      ...reanimeData.episodes.sub.map((ep: any) => ({ ...ep, type: 'sub' })),
+      ...reanimeData.episodes.dub.map((ep: any) => ({ ...ep, type: 'dub' }))
+    ];
+    return { episodes: formattedEps, siteId: reanimeData.meta.animeId };
   }
   if (source === 'desidub') {
     const slug = siteIds.siteIds?.desidub as string | undefined;
@@ -270,6 +284,11 @@ async function watchHandler(req: Request, res: Response) {
     if (source === 'animeheaven') allServers = await getHeavenServers(episode.id);
     if (source === 'anikoto') allServers = await getAnikotoServers(episode.id);
     if (source === 'desidub') allServers = await getDesidubServers(episode.id);
+    if (source === 'reanime') {
+      // ReAnime doesn't use a multi-server list, it resolves directly. 
+      // We mock a single "server" to keep the API shape consistent.
+      allServers = [{ name: 'ReAnime', sourceId: episode.id, type: episode.audio || type }];
+    }
 
     const filtered = type === 'all'
       ? allServers
@@ -389,6 +408,33 @@ async function watchHandler(req: Request, res: Response) {
         intro: null,
         outro: null,
         note: isHls || isMp4 ? null : 'No direct stream extracted — use embedUrl in an iframe.',
+      });
+    }
+
+     if (source === 'reanime') {
+      const streamData = await getReanimeWatch(siteIds.anilistId || id, type as 'sub' | 'dub', epNum);
+      const providerStream = streamData.streams[0];
+      
+      return res.json({
+        anilistId: siteIds.anilistId,
+        malId: siteIds.malId,
+        title: siteIds.title,
+        episode: epNum,
+        type,
+        source,
+        server: usedServer,
+        availableServers: filtered.map((s: any) => s.name),
+        embedUrl: null,
+        m3u8: providerStream.url,
+        hlsProxyUrl: proxiedHlsUrl(req, providerStream.url, BASE), // BASE is 'https://reanime.to'
+        playbackMode: 'hls',
+        iframeOnly: false,
+        subtitles: (providerStream.subtitles || []).map((s: any) => ({
+          url: proxiedSubtitleUrl(req, s.url, BASE),
+          language: s.language,
+        })),
+        intro: providerStream.intro,
+        outro: providerStream.outro,
       });
     }
 
