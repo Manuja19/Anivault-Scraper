@@ -1,0 +1,48 @@
+name: Expose API via Bore Tunnel
+
+on:
+  workflow_dispatch: # Allows you to manually click "Run workflow" in GitHub Actions
+
+jobs:
+  run-and-expose:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install Project Dependencies
+      run: npm install
+
+    - name: Install Bore CLI
+      run: |
+        echo "Downloading the latest version of Bore..."
+        curl -sL https://github.com | tar -xz
+        sudo mv bore /usr/local/bin/
+        bore --version
+
+    - name: Start API Server & Expose via Bore
+      run: |
+        # Generate dummy/example env if needed
+        if [ -f env.example ]; then cp env.example .env; fi
+        
+        # 1. Spin up your API server in the background (default Express port 3000)
+        npm run dev &
+        
+        # Give the API a brief moment to spin up 
+        sleep 3
+        
+        echo "=========================================================="
+        echo "🚀 EXPOSING LOCALHOST:3000 TO THE PUBLIC INTERNET..."
+        echo "Check the logs below to find your assigned public port!"
+        echo "=========================================================="
+        
+        # 2. Start the tunnel and keep it running for up to 30 minutes
+        # We cap the timeout so the GitHub runner runner doesn't get stuck forever
+        timeout 30m bore local 3000 --to bore.pub
