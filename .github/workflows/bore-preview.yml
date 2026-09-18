@@ -1,7 +1,7 @@
 name: Expose API via Cloudflare (No Warning Pages)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # Allows you to manually click "Run workflow" in GitHub Actions
 
 jobs:
   run-and-expose:
@@ -22,17 +22,25 @@ jobs:
 
     - name: Install Cloudflare Tunnel Client
       run: |
-        echo "Installing cloudflared CLI..."
-        curl -L --output cloudflared.deb https://github.com
-        sudo dpkg -i cloudflared.deb
+        echo "Downloading standalone cloudflared binary..."
+        # 1. Download the direct compiled 64-bit Linux binary executable file
+        curl -L -o cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64
+        
+        # 2. Grant executable permissions to the binary file
+        chmod +x cloudflared
+        
+        # 3. Move the binary into the global system execution path
+        sudo mv cloudflared /usr/local/bin/
         cloudflared --version
 
     - name: Start API Server & Expose via Cloudflare
       run: |
         if [ -f env.example ]; then cp env.example .env; fi
         
-        # 1. Spin up the Express API server in the background (port 3000)
+        # 1. Spin up the Express API server in the background (default port 3000)
         npm run dev &
+        
+        # Give the scraper API server 5 seconds to bind to its port
         sleep 5
         
         echo "=========================================================="
@@ -40,5 +48,6 @@ jobs:
         echo "Look at the logs below to grab your dynamic trycloudflare.com link!"
         echo "=========================================================="
         
-        # 2. Open an anonymous tunnel routing directly to your Express app port
+        # 2. Open an anonymous public quick tunnel routing traffic straight to port 3000
+        # The tunnel session is capped at 60 minutes to prevent stuck virtual runners
         timeout 60m cloudflared tunnel --url http://localhost:3000
