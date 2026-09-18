@@ -23,8 +23,13 @@ jobs:
     - name: Install Bore CLI
       run: |
         echo "Downloading the latest version of Bore..."
-        # Added -L flag to follow Github redirect locations securely
-        curl -sSL https://github.com | tar -xz
+        # 1. Download directly to a physical archive file
+        wget https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+        
+        # 2. Extract the local archive safely
+        tar -xvzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
+        
+        # 3. Move it to the system binary path
         sudo mv bore /usr/local/bin/
         bore --version
 
