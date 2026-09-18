@@ -23,7 +23,8 @@ jobs:
     - name: Install Bore CLI
       run: |
         echo "Downloading the latest version of Bore..."
-        curl -sL https://github.com | tar -xz
+        # Added -L flag to follow Github redirect locations securely
+        curl -sSL https://github.com | tar -xz
         sudo mv bore /usr/local/bin/
         bore --version
 
@@ -36,7 +37,7 @@ jobs:
         npm run dev &
         
         # Give the API a brief moment to spin up 
-        sleep 3
+        sleep 5
         
         echo "=========================================================="
         echo "🚀 EXPOSING LOCALHOST:3000 TO THE PUBLIC INTERNET..."
@@ -44,5 +45,4 @@ jobs:
         echo "=========================================================="
         
         # 2. Start the tunnel and keep it running for up to 30 minutes
-        # We cap the timeout so the GitHub runner runner doesn't get stuck forever
         timeout 30m bore local 3000 --to bore.pub
