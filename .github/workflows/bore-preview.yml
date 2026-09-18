@@ -1,7 +1,7 @@
-name: Expose API via Bore Tunnel
+name: Expose API via Cloudflare (No Warning Pages)
 
 on:
-  workflow_dispatch: # Allows you to manually click "Run workflow" in GitHub Actions
+  workflow_dispatch:
 
 jobs:
   run-and-expose:
@@ -20,34 +20,25 @@ jobs:
     - name: Install Project Dependencies
       run: npm install
 
-    - name: Install Bore CLI
+    - name: Install Cloudflare Tunnel Client
       run: |
-        echo "Downloading the latest version of Bore..."
-        # 1. Download directly to a physical archive file
-        wget https://github.com/ekzhang/bore/releases/download/v0.5.2/bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
-        
-        # 2. Extract the local archive safely
-        tar -xvzf bore-v0.5.2-x86_64-unknown-linux-musl.tar.gz
-        
-        # 3. Move it to the system binary path
-        sudo mv bore /usr/local/bin/
-        bore --version
+        echo "Installing cloudflared CLI..."
+        curl -L --output cloudflared.deb https://github.com
+        sudo dpkg -i cloudflared.deb
+        cloudflared --version
 
-    - name: Start API Server & Expose via Bore
+    - name: Start API Server & Expose via Cloudflare
       run: |
-        # Generate dummy/example env if needed
         if [ -f env.example ]; then cp env.example .env; fi
         
-        # 1. Spin up your API server in the background (default Express port 3000)
+        # 1. Spin up the Express API server in the background (port 3000)
         npm run dev &
-        
-        # Give the API a brief moment to spin up 
         sleep 5
         
         echo "=========================================================="
-        echo "🚀 EXPOSING LOCALHOST:3000 TO THE PUBLIC INTERNET..."
-        echo "Check the logs below to find your assigned public port!"
+        echo "🚀 GENERATING A WARNING-FREE CLOUDFLARE ENDPOINT..."
+        echo "Look at the logs below to grab your dynamic trycloudflare.com link!"
         echo "=========================================================="
         
-        # 2. Start the tunnel and keep it running for up to 30 minutes
-        timeout 30m bore local 3000 --to bore.pub
+        # 2. Open an anonymous tunnel routing directly to your Express app port
+        timeout 60m cloudflared tunnel --url http://localhost:3000
