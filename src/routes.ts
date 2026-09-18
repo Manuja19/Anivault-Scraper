@@ -357,8 +357,8 @@ async function watchHandler(req: Request, res: Response) {
           ...s,
           url: proxiedSubtitleUrl(req, s.url, embedResult.referer),
         })),
-        intro: null,
-        outro: null,
+        intro: embedResult.intro || null,   // <-- USE ACTUAL DATA
+        outro: embedResult.outro || null,   // <-- USE ACTUAL DATA
         note: embedResult.m3u8 ? null : 'No m3u8 extracted — use embedUrl in an iframe.',
       });
     }
