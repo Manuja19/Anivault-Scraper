@@ -89,6 +89,8 @@ export interface AnikotoStream {
   subtitles: AnikotoSubtitle[];
   serverName: string;
   type: 'hls' | 'iframe';
+  intro?: { start: number; end: number } | null; // <-- ADD THIS
+  outro?: { start: number; end: number } | null; // <-- ADD THIS
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -576,7 +578,16 @@ async function doMegacloud(embedUrl: string, html: string, referer: string, serv
 
     if (!m3u8) return null;
     log('megacloud: resolved', { embedUrl, m3u8 });
-    return { embedUrl, m3u8, referer, subtitles, serverName, type: 'hls' };
+        return {
+      embedUrl,
+      m3u8,
+      referer,
+      subtitles,
+      intro: data.intro || null,   // <-- ADD THIS
+      outro: data.outro || null,   // <-- ADD THIS
+      serverName,
+      type: 'hls'
+    };
   } catch (err) {
     log('megacloud: threw', { embedUrl, ...errInfo(err) });
     return null;
@@ -827,7 +838,16 @@ async function doMegaplay(host: string, html: string, referer: string, serverNam
       return null;
     }
     log('megaplay: resolved', { host, id, m3u8 });
-    return { embedUrl: `https://${host}/`, m3u8, referer, subtitles, serverName, type: 'hls' };
+       return {
+      embedUrl: `https://${host}/`,
+      m3u8,
+      referer,
+      subtitles,
+      intro: data.intro || null,   // <-- ADD THIS
+      outro: data.outro || null,   // <-- ADD THIS
+      serverName,
+      type: 'hls'
+    };
   } catch (err) {
     log('megaplay: getSources threw', { host, id, ...errInfo(err) });
     return null;
